@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import ProblemPanel from './components/ProblemPanel'
 import CodeEditor from './components/CodeEditor'
 import DraggableSpiderMan from './components/DraggableSpiderMan'
-import { analyzeCode, getSpiderManCoaching } from './services/api'
+import { analyzeCode, getSpiderManCoaching, textToSpeech } from './services/api'
 
 interface CodeAnalysis {
   complexity_hint: string
@@ -13,6 +13,49 @@ interface CoachResponse {
   message: string
 }
 
+// Cache for audio URLs
+const audioCache: { [key: string]: string } = {};
+
+async function speak(text: string, setIsSpeaking: (speaking: boolean) => void) {
+  try {
+    setIsSpeaking(true);
+    
+    // Check cache first
+    if (audioCache[text]) {
+      console.log('Using cached audio');
+      const audio = new Audio(audioCache[text]);
+      audio.onended = () => setIsSpeaking(false);
+      await audio.play();
+      return;
+    }
+
+    console.log('Starting TTS request with text:', text);
+    const audioBuffer = await textToSpeech(text);
+    console.log('Received audio buffer of size:', audioBuffer.byteLength);
+    const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
+    const url = URL.createObjectURL(blob);
+    
+    // Cache the audio URL
+    audioCache[text] = url;
+    
+    const audio = new Audio(url);
+    audio.onerror = (e) => {
+      console.error('Audio error:', e);
+      setIsSpeaking(false);
+    };
+    audio.onplay = () => console.log('Audio started playing');
+    audio.onended = () => {
+      console.log('Audio finished playing');
+      setIsSpeaking(false);
+    };
+    await audio.play();
+  } catch (error) {
+    console.error('Error with TTS:', error);
+    setIsSpeaking(false);
+  }
+}
+
+
 function App() {
   const [code, setCode] = useState(`// Write your solution here
 function twoSum(nums, target) {
@@ -21,6 +64,7 @@ function twoSum(nums, target) {
   
   const [coachMessage, setCoachMessage] = useState('🕸️ Welcome, hero! Ready to tackle some data structures and algorithms? Let\'s start with the Two Sum problem!')
   const [isLoading, setIsLoading] = useState(false)
+  const [isSpeaking, setIsSpeaking] = useState(false)
   const [showDialog, setShowDialog] = useState(false)
 
   const handleRunCode = async () => {
@@ -72,6 +116,20 @@ function twoSum(nums, target) {
         setShowDialog={setShowDialog}
         onRunCode={handleRunCode}
       />
+      <button
+        onClick={() => speak(coachMessage, setIsSpeaking)}
+        disabled={isSpeaking}
+        className={`absolute right-8 bottom-8 ${isSpeaking ? 'bg-gray-500' : 'bg-blue-600 hover:bg-red-600'} text-white font-bold py-2 px-4 rounded flex items-center gap-2`}
+      >
+        {isSpeaking ? (
+          <>
+            <span className="animate-pulse">🔊</span> Speaking...
+          </>
+        ) : (
+          <>🎙️ Hear Spidey Speak</>
+        )}
+      </button>
+
     </div>
   )
 }

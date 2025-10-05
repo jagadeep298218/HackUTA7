@@ -16,14 +16,14 @@ app = FastAPI(title="Spider-Man DSA Coach API", version="1.0.0")
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Allow both Vite and Node ports
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Initialize Gemini client
-client = genai.Client()
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Pydantic models
 class AnalyzeRequest(BaseModel):
