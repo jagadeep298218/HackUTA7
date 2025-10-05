@@ -22,7 +22,7 @@ app.post("/api/tts", async (req, res) => {
   console.log('POST /api/tts hit with body:', req.body); // <--- Logging for debug!
   try {
     // Get text and either default or provided voiceId from request body
-    const { text, voiceId = "QPBKI85w0cdXVqMSJ6WB" } = req.body;
+    const { text, voiceId = "kHhWB9Fw3aF6ly7JvltC" } = req.body;
 
     // Send POST request to ElevenLabs API
     const upstream = await fetch(
