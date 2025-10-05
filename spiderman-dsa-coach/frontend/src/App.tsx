@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
 import ProblemPanel from './components/ProblemPanel'
 import CodeEditor from './components/CodeEditor'
@@ -28,31 +28,16 @@ interface Question {
 // Cache for audio URLs so repeated messages don't re-fetch audio
 const audioCache: Record<string, string> = {}
 
-async function speak(text: string, setIsSpeaking: (speaking: boolean) => void) {
-  try {
-    setIsSpeaking(true)
-
-    if (audioCache[text]) {
-      const cachedAudio = new Audio(audioCache[text])
-      cachedAudio.onended = () => setIsSpeaking(false)
-      await cachedAudio.play()
-      return
-    }
-
-    const audioBuffer = await textToSpeech(text)
-    const blob = new Blob([audioBuffer], { type: 'audio/mpeg' })
-    const url = URL.createObjectURL(blob)
-
-    audioCache[text] = url
-
-    const audio = new Audio(url)
-    audio.onerror = () => setIsSpeaking(false)
-    audio.onended = () => setIsSpeaking(false)
-    await audio.play()
-  } catch (error) {
-    console.error('Error with TTS:', error)
-    setIsSpeaking(false)
+async function createAudioForText(text: string): Promise<HTMLAudioElement> {
+  if (audioCache[text]) {
+    return new Audio(audioCache[text])
   }
+
+  const audioBuffer = await textToSpeech(text)
+  const blob = new Blob([audioBuffer], { type: 'audio/mpeg' })
+  const url = URL.createObjectURL(blob)
+  audioCache[text] = url
+  return new Audio(url)
 }
 
 function App() {
@@ -77,11 +62,12 @@ function twoSum(nums, target) {
     "Welcome, hero! Ready to tackle some data structures and algorithms? Let's start with the Two Sum problem!",
   )
   const [isLoading, setIsLoading] = useState(false)
-  const [isSpeaking, setIsSpeaking] = useState(false)
+  const [, setIsSpeaking] = useState(false)
   const [showDialog, setShowDialog] = useState(false)
   const [terminalOutput, setTerminalOutput] = useState('')
   const [leftPanelWidth, setLeftPanelWidth] = useState(40)
   const [codeEditorHeight, setCodeEditorHeight] = useState(60)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
     const encouragingMessages = [
@@ -100,10 +86,69 @@ function twoSum(nums, target) {
     const interval = setInterval(() => {
       const randomMessage = encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)]
       setCoachMessage(randomMessage)
-    }, 10000)
+    }, 20000)
 
     return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+    const message = coachMessage.trim()
+    if (!message) return
+
+    let cancelled = false
+
+    const playSpeech = async () => {
+      try {
+        if (audioRef.current) {
+          audioRef.current.pause()
+          audioRef.current.currentTime = 0
+          audioRef.current = null
+        }
+
+        const audio = await createAudioForText(message)
+        if (cancelled) {
+          audio.pause()
+          return
+        }
+
+        setIsSpeaking(true)
+
+        const handleCleanup = () => {
+          audio.removeEventListener('ended', handleCleanup)
+          audio.removeEventListener('error', handleCleanup)
+          if (!cancelled && audioRef.current === audio) {
+            audioRef.current = null
+            setIsSpeaking(false)
+          }
+        }
+
+        audio.addEventListener('ended', handleCleanup)
+        audio.addEventListener('error', handleCleanup)
+
+        audio.currentTime = 0
+        audioRef.current = audio
+        await audio.play()
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Error with TTS autoplay:', error)
+          setIsSpeaking(false)
+        }
+      }
+    }
+
+    playSpeech()
+
+    return () => {
+      cancelled = true
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+        audioRef.current = null
+      }
+      setIsSpeaking(false)
+    }
+  }, [coachMessage, isAuthenticated])
 
   const handleRunCode = async () => {
     if (!code.trim()) {
@@ -340,20 +385,6 @@ public:
         setShowDialog={setShowDialog}
         onRunCode={handleRunCode}
       />
-      <button
-        onClick={() => speak(coachMessage, setIsSpeaking)}
-        disabled={isSpeaking}
-        className={`absolute right-8 bottom-8 ${isSpeaking ? 'bg-gray-500' : 'bg-blue-600 hover:bg-red-600'} text-white font-bold py-2 px-4 rounded flex items-center gap-2`}
-      >
-        {isSpeaking ? (
-          <>
-            <span className="animate-pulse">🔊</span> Speaking...
-          </>
-        ) : (
-          <>🎙️ Hear Spidey Speak</>
-        )}
-      </button>
-
     </div>
   )
 }

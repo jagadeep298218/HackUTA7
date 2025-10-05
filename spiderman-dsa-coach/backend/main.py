@@ -158,19 +158,42 @@ def get_test_cases_for_problem(problem_id: str) -> List[TestCase]:
         TestCase(input="[1, 2, 3]", expected="[0, 1]", description="Sample test case")
     ])
 
-def execute_javascript_code(code: str, test_case: TestCase) -> TestResult:
+def _function_name_candidates(problem_id: str) -> List[str]:
+    tokens = re.split(r'[-_\s]+', problem_id)
+    tokens = [token for token in tokens if token]
+    if not tokens:
+        return [problem_id]
+
+    sanitized = ''.join(tokens)
+    camel = tokens[0].lower() + ''.join(token.capitalize() for token in tokens[1:])
+    pascal = ''.join(token.capitalize() for token in tokens)
+    snake = '_'.join(tokens)
+
+    candidates = [
+        sanitized,
+        camel,
+        pascal,
+        snake,
+        problem_id.replace('-', ''),
+        problem_id,
+    ]
+
+    # Preserve order but remove duplicates
+    seen = set()
+    unique_candidates = []
+    for name in candidates:
+        if name and name not in seen:
+            seen.add(name)
+            unique_candidates.append(name)
+    return unique_candidates
+
+
+def execute_javascript_code(code: str, test_case: TestCase, problem_id: str) -> TestResult:
     """Execute JavaScript code with a test case"""
     try:
-        # Parse the input properly
-        # Input format: "[2, 7, 11, 15], 9"
-        parts = test_case.input.split(', ', 1)  # Split only on the first comma+space
-        if len(parts) != 2:
-            # Fallback for different formats
-            parts = test_case.input.rsplit(',', 1)  # Split from the right
-        
-        array_part = parts[0].strip()
-        target_part = parts[1].strip() if len(parts) > 1 else "0"
-        
+        function_candidates = _function_name_candidates(problem_id)
+        function_candidates_literal = json.dumps(function_candidates)
+
         # Create a temporary file
         with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as f:
             # Wrap the code in a test function
@@ -179,10 +202,41 @@ def execute_javascript_code(code: str, test_case: TestCase) -> TestResult:
 
 // Test execution
 try {{
-    const result = twoSum({array_part}, {target_part});
-    console.log(JSON.stringify(result));
+    const functionCandidates = {function_candidates_literal};
+    let fn = null;
+    for (const name of functionCandidates) {{
+        if (!name) continue;
+        try {{
+            const candidate = eval(name);
+            if (typeof candidate === 'function') {{
+                fn = candidate;
+                break;
+            }}
+        }} catch (err) {{
+            // Ignore invalid identifiers
+        }}
+    }}
+
+    if (typeof fn !== 'function') {{
+        throw new Error('Function not found. Expected one of: ' + functionCandidates.join(', '));
+    }}
+
+    let args;
+    try {{
+        args = eval('[{test_case.input}]');
+    }} catch (parseError) {{
+        throw new Error('Failed to parse inputs: ' + parseError.message);
+    }}
+
+    const result = fn(...(Array.isArray(args) ? args : [args]));
+    if (typeof result === 'undefined') {{
+        console.log('');
+    }} else {{
+        console.log(JSON.stringify(result));
+    }}
 }} catch (error) {{
     console.error("Error:", error.message);
+    process.exit(1);
 }}
 """
             f.write(test_code)
@@ -198,13 +252,11 @@ try {{
         if result.returncode == 0:
             actual_output = result.stdout.strip()
             expected_output = test_case.expected.strip()
-            
-            # Compare results - handle array outputs
-            # Remove spaces from both outputs for comparison
+
             actual_clean = actual_output.replace(' ', '').replace('\n', '')
             expected_clean = expected_output.replace(' ', '').replace('\n', '')
             passed = actual_clean == expected_clean
-            
+
             return TestResult(
                 test_case=1,
                 input=test_case.input,
@@ -213,13 +265,14 @@ try {{
                 passed=passed
             )
         else:
+            error_message = result.stderr.strip() or 'Execution failed'
             return TestResult(
                 test_case=1,
                 input=test_case.input,
                 expected=test_case.expected,
                 actual="",
                 passed=False,
-                error=result.stderr.strip()
+                error=error_message
             )
     except subprocess.TimeoutExpired:
         return TestResult(
@@ -377,7 +430,7 @@ async def run_code(request: RunCodeRequest):
         
         for i, test_case in enumerate(test_cases):
             if request.language.lower() == "javascript":
-                result = execute_javascript_code(request.code, test_case)
+                result = execute_javascript_code(request.code, test_case, request.problem_id)
                 result.test_case = i + 1
                 results.append(result)
                 if not result.passed:
