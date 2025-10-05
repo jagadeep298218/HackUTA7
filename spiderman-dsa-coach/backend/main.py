@@ -14,19 +14,25 @@ from google import genai
 # Load environment variables
 load_dotenv()
 
+GEMINI_ENV_KEYS = ("GOOGLE_API_KEY", "GEMINI_API_KEY", "GENAI_API_KEY")
+api_key = next((os.getenv(key) for key in GEMINI_ENV_KEYS if os.getenv(key)), None)
+
 app = FastAPI(title="Spider-Man DSA Coach API", version="1.0.0")
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Initialize Gemini client
-client = genai.Client()
+if not api_key:
+    raise ValueError("Missing Gemini/Google API key. Set GOOGLE_API_KEY or GEMINI_API_KEY in backend/.env")
+
+client = genai.Client(api_key=api_key)
 
 # Pydantic models
 class AnalyzeRequest(BaseModel):
