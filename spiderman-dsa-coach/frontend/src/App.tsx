@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
 import ProblemPanel from './components/ProblemPanel'
 import CodeEditor from './components/CodeEditor'
@@ -67,7 +67,89 @@ function App() {
   const [terminalOutput, setTerminalOutput] = useState('')
   const [leftPanelWidth, setLeftPanelWidth] = useState(40)
   const [codeEditorHeight, setCodeEditorHeight] = useState(60)
+
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const messageQueueRef = useRef<string[]>([])
+  const currentMessageRef = useRef<string | null>(null)
+  const isPlayingRef = useRef(false)
+
+  const cleanupCurrentAudio = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+      audioRef.current = null
+    }
+    currentMessageRef.current = null
+    isPlayingRef.current = false
+    setIsSpeaking(false)
+  }, [])
+
+  const playNextMessage = useCallback(async () => {
+    if (!isAuthenticated || isPlayingRef.current) {
+      return
+    }
+
+    const nextMessage = messageQueueRef.current.shift()
+    if (!nextMessage) {
+      return
+    }
+
+    try {
+      const audio = await createAudioForText(nextMessage)
+      if (!isAuthenticated) {
+        audio.pause()
+        return
+      }
+
+      const handleComplete = () => {
+        audio.removeEventListener('ended', handleComplete)
+        audio.removeEventListener('error', handleComplete)
+        cleanupCurrentAudio()
+        playNextMessage()
+      }
+
+      audioRef.current = audio
+      currentMessageRef.current = nextMessage
+      isPlayingRef.current = true
+      setIsSpeaking(true)
+
+      audio.addEventListener('ended', handleComplete)
+      audio.addEventListener('error', handleComplete)
+
+      try {
+        await audio.play()
+      } catch (error) {
+        console.error('Unable to start audio playback:', error)
+        handleComplete()
+      }
+    } catch (error) {
+      console.error('Error with TTS autoplay:', error)
+      cleanupCurrentAudio()
+      playNextMessage()
+    }
+  }, [cleanupCurrentAudio, isAuthenticated])
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      messageQueueRef.current = []
+      cleanupCurrentAudio()
+      return
+    }
+
+    const message = coachMessage.trim()
+    if (!message) {
+      return
+    }
+
+    const queue = messageQueueRef.current
+    const lastQueued = queue.length > 0 ? queue[queue.length - 1] : null
+    const currentlyPlaying = currentMessageRef.current
+
+    if (message !== lastQueued && message !== currentlyPlaying) {
+      queue.push(message)
+      playNextMessage()
+    }
+  }, [coachMessage, isAuthenticated, playNextMessage, cleanupCurrentAudio])
 
   useEffect(() => {
     const encouragingMessages = [
@@ -91,64 +173,10 @@ function App() {
     return () => clearInterval(interval)
   }, [])
 
-  useEffect(() => {
-    if (!isAuthenticated) return
-    const message = coachMessage.trim()
-    if (!message) return
-
-    let cancelled = false
-
-    const playSpeech = async () => {
-      try {
-        if (audioRef.current) {
-          audioRef.current.pause()
-          audioRef.current.currentTime = 0
-          audioRef.current = null
-        }
-
-        const audio = await createAudioForText(message)
-        if (cancelled) {
-          audio.pause()
-          return
-        }
-
-        setIsSpeaking(true)
-
-        const handleCleanup = () => {
-          audio.removeEventListener('ended', handleCleanup)
-          audio.removeEventListener('error', handleCleanup)
-          if (!cancelled && audioRef.current === audio) {
-            audioRef.current = null
-            setIsSpeaking(false)
-          }
-        }
-
-        audio.addEventListener('ended', handleCleanup)
-        audio.addEventListener('error', handleCleanup)
-
-        audio.currentTime = 0
-        audioRef.current = audio
-        await audio.play()
-      } catch (error) {
-        if (!cancelled) {
-          console.error('Error with TTS autoplay:', error)
-          setIsSpeaking(false)
-        }
-      }
-    }
-
-    playSpeech()
-
-    return () => {
-      cancelled = true
-      if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current.currentTime = 0
-        audioRef.current = null
-      }
-      setIsSpeaking(false)
-    }
-  }, [coachMessage, isAuthenticated])
+  useEffect(() => () => {
+    messageQueueRef.current = []
+    cleanupCurrentAudio()
+  }, [cleanupCurrentAudio])
 
   const handleRunCode = async () => {
     if (!code.trim()) {
@@ -296,10 +324,10 @@ function App() {
                 alt="D-CODE"
                 className="h-10 object-contain"
                 style={{ maxWidth: '200px', height: 'auto', display: 'block' }}
-                onError={(e) => {
-                  console.error('Failed to load name.png:', e)
-                  e.currentTarget.style.display = 'none'
-                  e.currentTarget.parentElement!.innerHTML =
+                onError={(event) => {
+                  console.error('Failed to load name.png:', event)
+                  event.currentTarget.style.display = 'none'
+                  event.currentTarget.parentElement!.innerHTML =
                     '<span class="text-xl font-bold text-white" style="font-family: Orbitron, sans-serif;">D-CODE</span>'
                 }}
               />
