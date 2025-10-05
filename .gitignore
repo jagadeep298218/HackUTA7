@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+.env
+
+# Build files
+dist/
+build/
+
+# Vite
+.vite/
+*.local
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo

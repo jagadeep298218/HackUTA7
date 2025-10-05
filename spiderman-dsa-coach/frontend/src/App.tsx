@@ -6,7 +6,7 @@ import DraggableSpiderMan from './components/DraggableSpiderMan'
 import LanguageSelector from './components/LanguageSelector'
 import TerminalOutput from './components/TerminalOutput'
 import QuestionsPage from './components/QuestionsPage'
-import { analyzeCode, getSpiderManCoaching, runCode, RunCodeResponse } from './services/api'
+import { analyzeCode, getSpiderManCoaching, runCode, RunCodeResponse, textToSpeech } from './services/api'
 
 interface CodeAnalysis {
   complexity_hint: string
@@ -23,6 +23,36 @@ interface Question {
   difficulty: 'Easy' | 'Medium' | 'Hard'
   description: string
   testCases: any[]
+}
+
+// Cache for audio URLs so repeated messages don't re-fetch audio
+const audioCache: Record<string, string> = {}
+
+async function speak(text: string, setIsSpeaking: (speaking: boolean) => void) {
+  try {
+    setIsSpeaking(true)
+
+    if (audioCache[text]) {
+      const cachedAudio = new Audio(audioCache[text])
+      cachedAudio.onended = () => setIsSpeaking(false)
+      await cachedAudio.play()
+      return
+    }
+
+    const audioBuffer = await textToSpeech(text)
+    const blob = new Blob([audioBuffer], { type: 'audio/mpeg' })
+    const url = URL.createObjectURL(blob)
+
+    audioCache[text] = url
+
+    const audio = new Audio(url)
+    audio.onerror = () => setIsSpeaking(false)
+    audio.onended = () => setIsSpeaking(false)
+    await audio.play()
+  } catch (error) {
+    console.error('Error with TTS:', error)
+    setIsSpeaking(false)
+  }
 }
 
 function App() {
@@ -47,6 +77,7 @@ function twoSum(nums, target) {
     "Welcome, hero! Ready to tackle some data structures and algorithms? Let's start with the Two Sum problem!",
   )
   const [isLoading, setIsLoading] = useState(false)
+  const [isSpeaking, setIsSpeaking] = useState(false)
   const [showDialog, setShowDialog] = useState(false)
   const [terminalOutput, setTerminalOutput] = useState('')
   const [leftPanelWidth, setLeftPanelWidth] = useState(40)
@@ -309,6 +340,20 @@ public:
         setShowDialog={setShowDialog}
         onRunCode={handleRunCode}
       />
+      <button
+        onClick={() => speak(coachMessage, setIsSpeaking)}
+        disabled={isSpeaking}
+        className={`absolute right-8 bottom-8 ${isSpeaking ? 'bg-gray-500' : 'bg-blue-600 hover:bg-red-600'} text-white font-bold py-2 px-4 rounded flex items-center gap-2`}
+      >
+        {isSpeaking ? (
+          <>
+            <span className="animate-pulse">🔊</span> Speaking...
+          </>
+        ) : (
+          <>🎙️ Hear Spidey Speak</>
+        )}
+      </button>
+
     </div>
   )
 }

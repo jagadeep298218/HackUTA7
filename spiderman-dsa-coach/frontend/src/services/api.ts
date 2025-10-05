@@ -1,9 +1,17 @@
 import axios from 'axios'
 
 const API_BASE_URL = 'http://localhost:8000'
+const TTS_API_URL = 'http://localhost:3000'
 
-const api = axios.create({
+const pythonApi = axios.create({
   baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+
+const ttsApi = axios.create({
+  baseURL: TTS_API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -33,7 +41,7 @@ export const analyzeCode = async (
   token?: string,
 ): Promise<CodeAnalysis> => {
   try {
-    const response = await api.post(
+    const response = await pythonApi.post(
       '/analyze',
       {
         code,
@@ -54,7 +62,7 @@ export const getSpiderManCoaching = async (
   token?: string,
 ): Promise<CoachResponse> => {
   try {
-    const response = await api.post(
+    const response = await pythonApi.post(
       '/coach',
       {
         code,
@@ -97,19 +105,35 @@ export const runCode = async (
   token?: string,
 ): Promise<RunCodeResponse> => {
   try {
-    const response = await api.post(
+    const response = await pythonApi.post(
       '/run-code',
       {
         code,
         language,
         problem_id: problemId,
-        test_cases: [], // Will be populated by backend
+        test_cases: [],
       },
       withAuthHeader(token),
     )
     return response.data
   } catch (error) {
     console.error('Error running code:', error)
+    throw error
+  }
+}
+
+export const textToSpeech = async (text: string): Promise<ArrayBuffer> => {
+  try {
+    const response = await ttsApi.post(
+      '/api/tts',
+      { text },
+      {
+        responseType: 'arraybuffer',
+      },
+    )
+    return response.data
+  } catch (error) {
+    console.error('Error with text-to-speech:', error)
     throw error
   }
 }
