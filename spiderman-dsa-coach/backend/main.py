@@ -4,6 +4,9 @@ from pydantic import BaseModel
 import os
 import re
 import ast
+import subprocess
+import tempfile
+import json
 from typing import List, Dict, Any
 from dotenv import load_dotenv
 from google import genai
@@ -40,6 +43,30 @@ class CoachRequest(BaseModel):
 
 class CoachResponse(BaseModel):
     message: str
+
+class TestCase(BaseModel):
+    input: str
+    expected: str
+    description: str
+
+class RunCodeRequest(BaseModel):
+    code: str
+    language: str
+    problem_id: str
+    test_cases: List[TestCase]
+
+class TestResult(BaseModel):
+    test_case: int
+    input: str
+    expected: str
+    actual: str
+    passed: bool
+    error: str = None
+
+class RunCodeResponse(BaseModel):
+    results: List[TestResult]
+    overall_passed: bool
+    execution_time: float
 
 # Code analysis functions
 def detect_data_structures(code: str) -> List[str]:
@@ -102,6 +129,111 @@ def estimate_complexity(code: str, structures: List[str]) -> str:
     else:
         return "O(1)"
 
+# Code execution functions
+def get_test_cases_for_problem(problem_id: str) -> List[TestCase]:
+    """Get test cases for a specific problem"""
+    test_cases_map = {
+        "two-sum": [
+            TestCase(input="[2, 7, 11, 15], 9", expected="[0,1]", description="Basic two sum"),
+            TestCase(input="[3, 2, 4], 6", expected="[1,2]", description="Different indices"),
+            TestCase(input="[3, 3], 6", expected="[0,1]", description="Same values"),
+        ],
+        "reverse-string": [
+            TestCase(input='"hello"', expected='"olleh"', description="Basic reverse"),
+            TestCase(input='"world"', expected='"dlrow"', description="Another string"),
+        ],
+        "valid-parentheses": [
+            TestCase(input='"()"', expected="true", description="Simple parentheses"),
+            TestCase(input='"(())"', expected="true", description="Nested parentheses"),
+            TestCase(input='"([)]"', expected="false", description="Invalid nesting"),
+        ]
+    }
+    return test_cases_map.get(problem_id, [
+        TestCase(input="[1, 2, 3]", expected="[0, 1]", description="Sample test case")
+    ])
+
+def execute_javascript_code(code: str, test_case: TestCase) -> TestResult:
+    """Execute JavaScript code with a test case"""
+    try:
+        # Parse the input properly
+        # Input format: "[2, 7, 11, 15], 9"
+        parts = test_case.input.split(', ', 1)  # Split only on the first comma+space
+        if len(parts) != 2:
+            # Fallback for different formats
+            parts = test_case.input.rsplit(',', 1)  # Split from the right
+        
+        array_part = parts[0].strip()
+        target_part = parts[1].strip() if len(parts) > 1 else "0"
+        
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as f:
+            # Wrap the code in a test function
+            test_code = f"""
+{code}
+
+// Test execution
+try {{
+    const result = twoSum({array_part}, {target_part});
+    console.log(JSON.stringify(result));
+}} catch (error) {{
+    console.error("Error:", error.message);
+}}
+"""
+            f.write(test_code)
+            temp_file = f.name
+        
+        # Execute the code
+        result = subprocess.run(['node', temp_file], 
+                              capture_output=True, text=True, timeout=5)
+        
+        # Clean up
+        os.unlink(temp_file)
+        
+        if result.returncode == 0:
+            actual_output = result.stdout.strip()
+            expected_output = test_case.expected.strip()
+            
+            # Compare results - handle array outputs
+            # Remove spaces from both outputs for comparison
+            actual_clean = actual_output.replace(' ', '').replace('\n', '')
+            expected_clean = expected_output.replace(' ', '').replace('\n', '')
+            passed = actual_clean == expected_clean
+            
+            return TestResult(
+                test_case=1,
+                input=test_case.input,
+                expected=test_case.expected,
+                actual=actual_output,
+                passed=passed
+            )
+        else:
+            return TestResult(
+                test_case=1,
+                input=test_case.input,
+                expected=test_case.expected,
+                actual="",
+                passed=False,
+                error=result.stderr.strip()
+            )
+    except subprocess.TimeoutExpired:
+        return TestResult(
+            test_case=1,
+            input=test_case.input,
+            expected=test_case.expected,
+            actual="",
+            passed=False,
+            error="Execution timeout"
+        )
+    except Exception as e:
+        return TestResult(
+            test_case=1,
+            input=test_case.input,
+            expected=test_case.expected,
+            actual="",
+            passed=False,
+            error=str(e)
+        )
+
 # Spider-Man coaching system prompt
 SPIDERMAN_SYSTEM_PROMPT = """You are Spider-Man (Peter Parker), acting as a witty and encouraging coding mentor for data structures and algorithms.
 
@@ -113,11 +245,11 @@ Your personality:
 - Focuses on helping students think through problems
 
 Communication style:
-- Start messages with 🕸️ emoji
 - Use casual, friendly language
 - Include Spider-Man references (webs, villains, superpowers, etc.)
 - Keep responses concise (2-3 sentences max)
 - Always end with a thought-provoking question
+- Do NOT use any emojis in your responses
 
 Your role:
 - Analyze the student's code and provide constructive feedback
@@ -127,17 +259,17 @@ Your role:
 - Help them understand time/space complexity implications
 
 Example responses:
-🕸️ "That nested loop looks stickier than my web! What happens if you had 10,000 villains instead of 10?"
+ "That nested loop looks stickier than my web! What happens if you had 10,000 villains instead of 10?"
 
-🕸️ "Good job using a hashmap! But remember, with great power comes great responsibility - are you sure you need all that extra space?"
+ "Good job using a hashmap! But remember, with great power comes great responsibility - are you sure you need all that extra space?"
 
-🕸️ "O(n²)? That's slower than the Green Goblin's escape plan! Can you think of a way to catch those villains faster?"
+ "O(n²)? That's slower than the Green Goblin's escape plan! Can you think of a way to catch those villains faster?"
 
 Always be encouraging and help them learn through guided discovery, not direct answers."""
 
 @app.get("/")
 async def root():
-    return {"message": "🕸️ Spider-Man DSA Coach API is running! With great power comes great responsibility!"}
+    return {"message": " Spider-Man DSA Coach API is running! With great power comes great responsibility!"}
 
 @app.post("/analyze", response_model=AnalyzeResponse)
 async def analyze_code(request: AnalyzeRequest):
@@ -166,7 +298,7 @@ async def get_spiderman_coaching(request: CoachRequest):
 Detected: {structures_text}
 Complexity: {complexity}
 
-Give Spider-Man coaching in 2 sentences. Start with 🕸️"""
+Give Spider-Man coaching in 2 sentences. Start with """
 
         print("About to call Gemini API...")  # Debug logging
         
@@ -189,11 +321,11 @@ Give Spider-Man coaching in 2 sentences. Start with 🕸️"""
             print(f"Extracted text length: {len(coaching_message)}")  # Debug
         except Exception as text_error:
             print(f"Error accessing response text: {text_error}")
-            coaching_message = "🕸️ Great work, hero! Keep coding and you'll master this!"
+            coaching_message = " Great work, hero! Keep coding and you'll master this!"
         
         # Fallback if we still don't have a message
         if not coaching_message:
-            coaching_message = "🕸️ Great work, hero! Keep coding and you'll master this!"
+            coaching_message = " Great work, hero! Keep coding and you'll master this!"
         
         return CoachResponse(message=coaching_message)
         
@@ -208,21 +340,64 @@ Give Spider-Man coaching in 2 sentences. Start with 🕸️"""
         
         # Generate Spider-Man responses based on detected patterns
         if "nested_loop" in structures:
-            fallback_message = "🕸️ That nested loop looks stickier than my web! What happens if you had 10,000 villains instead of 10? Can you think of a faster way to catch them?"
+            fallback_message = " That nested loop looks stickier than my web! What happens if you had 10,000 villains instead of 10? Can you think of a faster way to catch them?"
         elif "loop" in structures and "hashmap" in structures:
-            fallback_message = "🕸️ Great use of a hashmap, hero! But remember, with great power comes great responsibility - are you sure you need all that extra space?"
+            fallback_message = " Great use of a hashmap, hero! But remember, with great power comes great responsibility - are you sure you need all that extra space?"
         elif "loop" in structures:
-            fallback_message = "🕸️ Nice loop work! But what if your array was as big as New York City? How would you make it more efficient?"
+            fallback_message = " Nice loop work! But what if your array was as big as New York City? How would you make it more efficient?"
         elif "recursion" in structures:
-            fallback_message = "🕸️ Recursion, huh? That's like calling yourself for backup! But what if you're dealing with a really deep problem? Any ideas to prevent stack overflow?"
+            fallback_message = " Recursion, huh? That's like calling yourself for backup! But what if you're dealing with a really deep problem? Any ideas to prevent stack overflow?"
         elif complexity == "O(n²)":
-            fallback_message = "🕸️ O(n²)? That's slower than the Green Goblin's escape plan! Can you think of a way to catch those villains faster?"
+            fallback_message = " O(n²)? That's slower than the Green Goblin's escape plan! Can you think of a way to catch those villains faster?"
         elif "array" in structures:
-            fallback_message = "🕸️ Good start with arrays, hero! But what if you needed to find something quickly? What data structure would be better for that?"
+            fallback_message = " Good start with arrays, hero! But what if you needed to find something quickly? What data structure would be better for that?"
         else:
-            fallback_message = "🕸️ Keep coding, hero! Every great superhero started somewhere. What's your next move to solve this problem?"
+            fallback_message = " Keep coding, hero! Every great superhero started somewhere. What's your next move to solve this problem?"
         
         return CoachResponse(message=fallback_message)
+
+@app.post("/run-code", response_model=RunCodeResponse)
+async def run_code(request: RunCodeRequest):
+    """Execute code and run test cases"""
+    try:
+        import time
+        start_time = time.time()
+        
+        # Get test cases for the problem
+        test_cases = get_test_cases_for_problem(request.problem_id)
+        
+        results = []
+        overall_passed = True
+        
+        for i, test_case in enumerate(test_cases):
+            if request.language.lower() == "javascript":
+                result = execute_javascript_code(request.code, test_case)
+                result.test_case = i + 1
+                results.append(result)
+                if not result.passed:
+                    overall_passed = False
+            else:
+                # For other languages, return a placeholder result
+                results.append(TestResult(
+                    test_case=i + 1,
+                    input=test_case.input,
+                    expected=test_case.expected,
+                    actual="Language not yet supported",
+                    passed=False,
+                    error=f"Language {request.language} execution not implemented yet"
+                ))
+                overall_passed = False
+        
+        execution_time = time.time() - start_time
+        
+        return RunCodeResponse(
+            results=results,
+            overall_passed=overall_passed,
+            execution_time=execution_time
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Code execution failed: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

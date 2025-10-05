@@ -15,7 +15,7 @@ const DraggableSpiderMan: React.FC<DraggableSpiderManProps> = ({
   setShowDialog,
   onRunCode
 }) => {
-  const [position, setPosition] = useState({ x: window.innerWidth - 150, y: window.innerHeight - 150 })
+  const [position, setPosition] = useState({ x: window.innerWidth - 120, y: window.innerHeight - 320 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [showBubble, setShowBubble] = useState(false)
@@ -50,8 +50,8 @@ const DraggableSpiderMan: React.FC<DraggableSpiderManProps> = ({
       const newY = e.clientY - dragOffset.y
       
       // Keep mascot within screen bounds
-      const maxX = window.innerWidth - 100
-      const maxY = window.innerHeight - 100
+      const maxX = window.innerWidth - 160
+      const maxY = window.innerHeight - 160
       
       setPosition({
         x: Math.max(0, Math.min(newX, maxX)),
@@ -122,25 +122,33 @@ const DraggableSpiderMan: React.FC<DraggableSpiderManProps> = ({
       >
         <div className="relative">
           {/* Spider-Man Avatar */}
-          <div className="w-20 h-20 bg-gradient-to-br from-spiderman-red to-spiderman-blue rounded-full flex items-center justify-center shadow-2xl border-4 border-white hover:shadow-red-500/50 transition-all duration-300">
+          <div className="w-32 h-32 flex items-center justify-center shadow-2xl transition-all duration-300">
             {isLoading ? (
               <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-white rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
               </div>
             ) : (
-              <span className="text-3xl">🕷️</span>
+              <img
+                src={showBubble ? "/speaking_pose.png" : "/standard_pose.png"}
+                alt="Spider-Man Mascot"
+                className={`w-full h-full object-contain transition-all duration-300 hover:scale-105 ${
+                  showBubble ? 'animate-pulse' : ''
+                }`}
+                style={{ 
+                  filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))',
+                  imageRendering: 'crisp-edges'
+                }}
+                onError={(e) => {
+                  // Fallback if images don't exist
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full bg-red-500 rounded-full flex items-center justify-center text-white text-xl font-bold">SM</div>';
+                }}
+              />
             )}
           </div>
           
-          {/* Web effect */}
-          <div className="absolute -inset-2 opacity-20">
-            <div className="w-full h-full border border-spiderman-red rounded-full animate-pulse"></div>
-          </div>
-          
-          {/* Glow effect when hovering */}
-          <div className="absolute -inset-4 bg-spiderman-red/20 rounded-full blur-md opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
         </div>
       </div>
 
@@ -150,8 +158,21 @@ const DraggableSpiderMan: React.FC<DraggableSpiderManProps> = ({
           <div className="bg-white rounded-2xl p-8 max-w-md mx-4 shadow-2xl border-4 border-spiderman-red">
             {/* Dialog header */}
             <div className="flex items-center mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-spiderman-red to-spiderman-blue rounded-full flex items-center justify-center mr-4">
-                <span className="text-2xl">🕷️</span>
+              <div className="w-12 h-12 flex items-center justify-center mr-4">
+                <img
+                  src="/speaking_pose.png"
+                  alt="Spider-Man"
+                  className="w-full h-full object-contain"
+                  style={{ 
+                    filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))',
+                    imageRendering: 'crisp-edges'
+                  }}
+                  onError={(e) => {
+                    // Fallback if image doesn't exist
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full bg-red-500 rounded-full flex items-center justify-center text-white text-lg font-bold">SM</div>';
+                  }}
+                />
               </div>
               <div>
                 <h3 className="text-xl font-bold text-spiderman-red">Spider-Man Coach</h3>
@@ -161,15 +182,14 @@ const DraggableSpiderMan: React.FC<DraggableSpiderManProps> = ({
 
             {/* Dialog content */}
             <div className="mb-6">
-              <p className="text-gray-800 text-lg mb-4">🕸️ How can I help you, hero?</p>
+              <p className="text-gray-800 text-lg mb-4">How can I help you, hero?</p>
               
               <div className="space-y-3">
                 <button
                   onClick={onRunCode}
-                  className="w-full bg-spiderman-red hover:bg-red-600 text-white py-3 px-4 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center space-x-2"
+                  className="w-full bg-spiderman-red hover:bg-red-600 text-white py-3 px-4 rounded-lg font-semibold transition-colors duration-200 spiderman-glitch"
                 >
-                  <span>🚀</span>
-                  <span>Analyze My Code</span>
+                  Analyze My Code
                 </button>
                 
                 <button
@@ -183,7 +203,7 @@ const DraggableSpiderMan: React.FC<DraggableSpiderManProps> = ({
 
             {/* Dialog footer */}
             <div className="text-center text-sm text-gray-500">
-              <p>"With great power comes great responsibility!" 🕸️</p>
+              <p>"With great power comes great responsibility!"</p>
             </div>
           </div>
         </div>

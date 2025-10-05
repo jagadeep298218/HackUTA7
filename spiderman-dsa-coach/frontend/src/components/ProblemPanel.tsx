@@ -1,31 +1,54 @@
 import React from 'react'
 
-const ProblemPanel: React.FC = () => {
+interface Question {
+  id: string
+  title: string
+  difficulty: 'Easy' | 'Medium' | 'Hard'
+  description: string
+  testCases: any[]
+}
+
+interface ProblemPanelProps {
+  selectedQuestion?: Question | null
+}
+
+const ProblemPanel: React.FC<ProblemPanelProps> = ({ selectedQuestion }) => {
+  const question = selectedQuestion || {
+    id: 'two-sum',
+    title: 'Two Sum',
+    difficulty: 'Easy',
+    description: 'Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.',
+    testCases: []
+  }
   return (
-    <div className="h-full p-6 text-white">
+    <div className="h-full p-6 text-white overflow-y-auto flex flex-col">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-spiderman-red mb-2">
-          🕸️ Two Sum
-        </h1>
-        <div className="text-sm text-gray-400 mb-4">
-          Difficulty: Easy | Category: Array, Hash Table
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-3xl font-bold text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+            {question.title}
+          </h1>
+          <span className="difficulty-badge">
+            {question.difficulty}
+          </span>
         </div>
+        <div className="text-sm text-gray-400 mb-4">
+          Category: Array, Hash Table
+        </div>
+        <hr className="angular-divider" />
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 flex-1">
         <div>
-          <h3 className="text-lg font-semibold text-spiderman-blue mb-2">
+          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--spider-cyan)', fontFamily: 'Orbitron, sans-serif' }}>
             Problem Description
           </h3>
           <p className="text-gray-300 leading-relaxed">
-            Given an array of integers <code className="bg-gray-700 px-1 rounded">nums</code> and an 
-            integer <code className="bg-gray-700 px-1 rounded">target</code>, return indices of the 
-            two numbers such that they add up to <code className="bg-gray-700 px-1 rounded">target</code>.
+            {question.description}
           </p>
         </div>
 
         <div>
-          <h3 className="text-lg font-semibold text-spiderman-blue mb-2">
+          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--spider-cyan)', fontFamily: 'Orbitron, sans-serif' }}>
             Example
           </h3>
           <div className="bg-gray-700 p-3 rounded-lg">
@@ -38,7 +61,7 @@ const ProblemPanel: React.FC = () => {
         </div>
 
         <div>
-          <h3 className="text-lg font-semibold text-spiderman-blue mb-2">
+          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--spider-cyan)', fontFamily: 'Orbitron, sans-serif' }}>
             Constraints
           </h3>
           <ul className="text-gray-300 space-y-1 text-sm">
@@ -49,12 +72,21 @@ const ProblemPanel: React.FC = () => {
           </ul>
         </div>
 
-        <div className="mt-6 p-4 bg-gradient-to-r from-spiderman-red/20 to-spiderman-blue/20 rounded-lg border border-spiderman-red/30">
-          <p className="text-sm text-gray-300">
-            <strong>💡 Spider-Man's Tip:</strong> Think about what data structure could help you 
-            remember what you've seen before. Sometimes the best solution isn't the first one 
-            that comes to mind!
-          </p>
+        <div className="mt-6 holographic-box p-4">
+          <div className="flex items-start space-x-3">
+            <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="w-3 h-3 bg-white rounded-full"></div>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-white mb-1" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                Spider-Man's Tip
+              </h4>
+              <p className="text-sm text-gray-300">
+                Think about what data structure could help you remember what you've seen before. 
+                Sometimes the best solution isn't the first one that comes to mind!
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

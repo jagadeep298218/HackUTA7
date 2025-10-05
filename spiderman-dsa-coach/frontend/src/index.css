@@ -2,19 +2,299 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import modern fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@400;700;900&display=swap');
+
+/* Custom Font */
 body {
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+}
+
+/* Angular, bold headers */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+}
+
+/* High-tech Spider-Man color variables */
+:root {
+  --spider-red: #dc2626;
+  --spider-red-dark: #b91c1c;
+  --spider-blue: #0ea5e9;
+  --spider-blue-dark: #0284c7;
+  --spider-cyan: #06b6d4;
+  --spider-cyan-dark: #0891b2;
+  --spider-dark: #0f172a;
+  --spider-darker: #020617;
+  --spider-grid: #1e293b;
+}
+
+/* High-tech Spider-Man Background */
+.tech-background {
+  background: var(--spider-darker);
+  background-image: 
+    radial-gradient(circle at 25% 25%, var(--spider-grid) 2px, transparent 2px),
+    radial-gradient(circle at 75% 75%, var(--spider-grid) 1px, transparent 1px);
+  background-size: 50px 50px;
+  background-position: 0 0, 25px 25px;
+}
+
+/* Hexagonal grid pattern */
+.hex-grid {
+  background: var(--spider-darker);
+  background-image: 
+    linear-gradient(30deg, var(--spider-grid) 12%, transparent 12.5%, transparent 87%, var(--spider-grid) 87.5%, var(--spider-grid)),
+    linear-gradient(150deg, var(--spider-grid) 12%, transparent 12.5%, transparent 87%, var(--spider-grid) 87.5%, var(--spider-grid)),
+    linear-gradient(30deg, var(--spider-grid) 12%, transparent 12.5%, transparent 87%, var(--spider-grid) 87.5%, var(--spider-grid)),
+    linear-gradient(150deg, var(--spider-grid) 12%, transparent 12.5%, transparent 87%, var(--spider-grid) 87.5%, var(--spider-grid));
+  background-size: 80px 140px;
+  background-position: 0 0, 0 0, 40px 70px, 40px 70px;
+}
+
+/* Spider-Man Theme Effects */
+@keyframes spiderman-glitch {
+  0% { transform: translate(0); }
+  20% { transform: translate(-2px, 2px); }
+  40% { transform: translate(-2px, -2px); }
+  60% { transform: translate(2px, 2px); }
+  80% { transform: translate(2px, -2px); }
+  100% { transform: translate(0); }
+}
+
+@keyframes spiderman-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 5px var(--spider-red), 0 0 10px var(--spider-red), 0 0 15px var(--spider-red);
+  }
+  50% { 
+    box-shadow: 0 0 10px var(--spider-red), 0 0 20px var(--spider-red), 0 0 30px var(--spider-red);
+  }
+}
+
+@keyframes electric-glow {
+  0%, 100% { 
+    box-shadow: 0 0 5px var(--spider-cyan), 0 0 10px var(--spider-cyan), 0 0 15px var(--spider-cyan);
+  }
+  50% { 
+    box-shadow: 0 0 10px var(--spider-cyan), 0 0 20px var(--spider-cyan), 0 0 30px var(--spider-cyan);
+  }
+}
+
+@keyframes holographic-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes web-swing {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+}
+
+.spiderman-glitch:hover {
+  animation: spiderman-glitch 0.3s ease-in-out;
+}
+
+.spiderman-pulse {
+  animation: spiderman-pulse 2s ease-in-out infinite;
+}
+
+.electric-glow {
+  animation: electric-glow 2s ease-in-out infinite;
+}
+
+.web-swing:hover {
+  animation: web-swing 0.5s ease-in-out;
+}
+
+/* High-tech components */
+.holographic-box {
+  background: linear-gradient(135deg, var(--spider-cyan) 0%, var(--spider-blue) 50%, var(--spider-cyan) 100%);
+  background-size: 200% 200%;
+  animation: holographic-shimmer 3s ease-in-out infinite;
+  border: 1px solid var(--spider-cyan);
+  border-radius: 8px;
+  position: relative;
+}
+
+.holographic-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(6, 182, 212, 0.1);
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.angular-divider {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--spider-cyan), transparent);
+  border: none;
+  margin: 1rem 0;
+}
+
+.difficulty-badge {
+  background: var(--spider-red);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tech-button {
+  background: var(--spider-red);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.tech-button:hover {
+  background: var(--spider-red-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.tech-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.tech-button:hover::before {
+  left: 100%;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--spider-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--spider-red);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--spider-red-dark);
+}
+
+/* Status ticker */
+.status-ticker {
+  background: var(--spider-dark);
+  border-top: 1px solid var(--spider-cyan);
+  color: var(--spider-cyan);
+  font-family: 'Orbitron', monospace;
+  font-size: 0.75rem;
+  padding: 0.5rem 1rem;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+}
+
+.status-ticker::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--spider-cyan), transparent);
+}
+
+.ticker-text {
+  display: inline-block;
+  animation: scroll-left 20s linear infinite;
+}
+
+@keyframes scroll-left {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+/* Web splat icon */
+.web-splat {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background: radial-gradient(circle, var(--spider-cyan) 30%, transparent 70%);
+  border-radius: 50%;
+  margin-right: 0.5rem;
+  position: relative;
+}
+
+.web-splat::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  background: var(--spider-cyan);
+  border-radius: 50%;
+}
+
+/* Resize handles */
+.cursor-col-resize {
+  cursor: col-resize;
+}
+
+.cursor-row-resize {
+  cursor: row-resize;
+}
+
+.cursor-col-resize:hover {
+  background: var(--spider-cyan) !important;
+}
+
+.cursor-row-resize:hover {
+  background: var(--spider-cyan) !important;
+}
+
+* {
+  box-sizing: border-box;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  min-height: 100vh;
 }
 
 #root {
   height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Custom scrollbar */
