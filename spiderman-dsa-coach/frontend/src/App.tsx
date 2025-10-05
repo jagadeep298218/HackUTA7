@@ -291,7 +291,7 @@ function App() {
   if (!isAuthenticated) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 text-white gap-6 px-4 text-center">
-        <h1 className="text-4xl font-bold">Spidey Coach needs you to log in</h1>
+        <h1 className="text-4xl font-bold">Capy Parker needs you to log in</h1>
         <p className="max-w-xl text-lg">
           Sign in with Auth0 to unlock personalized DSA feedback, track your progress, and keep your heroic efforts secure.
         </p>
