@@ -55,6 +55,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```bash
 cd frontend
 npm install
+cp .env.example .env.local # update with your Auth0 values
 npm run dev
 ```
 
@@ -63,6 +64,12 @@ npm run dev
 Create a `.env` file in the backend directory:
 ```
 OPENAI_API_KEY=your_openai_api_key_here
+```
+
+For the frontend, create `.env.local` inside `frontend/` (or update the file created above) with your Auth0 SPA settings:
+```
+VITE_AUTH0_DOMAIN=your-domain.us.auth0.com
+VITE_AUTH0_CLIENT_ID=yourClientId
 ```
 
 ## How It Works

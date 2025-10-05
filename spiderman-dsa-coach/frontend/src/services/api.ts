@@ -9,6 +9,15 @@ const api = axios.create({
   },
 })
 
+const withAuthHeader = (token?: string) =>
+  token
+    ? {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    : undefined
+
 export interface CodeAnalysis {
   complexity_hint: string
   structures: string[]
@@ -18,12 +27,20 @@ export interface CoachResponse {
   message: string
 }
 
-export const analyzeCode = async (code: string, problemId: string): Promise<CodeAnalysis> => {
+export const analyzeCode = async (
+  code: string,
+  problemId: string,
+  token?: string,
+): Promise<CodeAnalysis> => {
   try {
-    const response = await api.post('/analyze', {
-      code,
-      problem_id: problemId,
-    })
+    const response = await api.post(
+      '/analyze',
+      {
+        code,
+        problem_id: problemId,
+      },
+      withAuthHeader(token),
+    )
     return response.data
   } catch (error) {
     console.error('Error analyzing code:', error)
@@ -31,12 +48,20 @@ export const analyzeCode = async (code: string, problemId: string): Promise<Code
   }
 }
 
-export const getSpiderManCoaching = async (code: string, analysis: CodeAnalysis): Promise<CoachResponse> => {
+export const getSpiderManCoaching = async (
+  code: string,
+  analysis: CodeAnalysis,
+  token?: string,
+): Promise<CoachResponse> => {
   try {
-    const response = await api.post('/coach', {
-      code,
-      analysis,
-    })
+    const response = await api.post(
+      '/coach',
+      {
+        code,
+        analysis,
+      },
+      withAuthHeader(token),
+    )
     return response.data
   } catch (error) {
     console.error('Error getting coaching:', error)
@@ -65,14 +90,23 @@ export interface RunCodeResponse {
   execution_time: number
 }
 
-export const runCode = async (code: string, language: string, problemId: string): Promise<RunCodeResponse> => {
+export const runCode = async (
+  code: string,
+  language: string,
+  problemId: string,
+  token?: string,
+): Promise<RunCodeResponse> => {
   try {
-    const response = await api.post('/run-code', {
-      code,
-      language,
-      problem_id: problemId,
-      test_cases: [] // Will be populated by backend
-    })
+    const response = await api.post(
+      '/run-code',
+      {
+        code,
+        language,
+        problem_id: problemId,
+        test_cases: [], // Will be populated by backend
+      },
+      withAuthHeader(token),
+    )
     return response.data
   } catch (error) {
     console.error('Error running code:', error)
