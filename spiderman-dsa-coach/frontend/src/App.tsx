@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
 import ProblemPanel from './components/ProblemPanel'
 import CodeEditor from './components/CodeEditor'
@@ -6,7 +6,19 @@ import DraggableSpiderMan from './components/DraggableSpiderMan'
 import LanguageSelector from './components/LanguageSelector'
 import TerminalOutput from './components/TerminalOutput'
 import QuestionsPage from './components/QuestionsPage'
-import { analyzeCode, getSpiderManCoaching, runCode, RunCodeResponse, textToSpeech } from './services/api'
+import {
+  analyzeCode,
+  getSpiderManCoaching,
+  runCode,
+  RunCodeResponse,
+  textToSpeech,
+} from './services/api'
+import {
+  defaultProblem,
+  getProblemDefinition,
+  getTemplateForProblem,
+  type ProblemDefinition,
+} from './data/problems'
 
 interface CodeAnalysis {
   complexity_hint: string
@@ -17,15 +29,6 @@ interface CoachResponse {
   message: string
 }
 
-interface Question {
-  id: string
-  title: string
-  difficulty: 'Easy' | 'Medium' | 'Hard'
-  description: string
-  testCases: any[]
-}
-
-// Cache for audio URLs so repeated messages don't re-fetch audio
 const audioCache: Record<string, string> = {}
 
 async function createAudioForText(text: string): Promise<HTMLAudioElement> {
@@ -53,13 +56,10 @@ function App() {
 
   const [currentView, setCurrentView] = useState<'dashboard' | 'questions'>('dashboard')
   const [selectedLanguage, setSelectedLanguage] = useState('javascript')
-  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null)
-  const [code, setCode] = useState(`// Write your solution here
-function twoSum(nums, target) {
-    // Your code goes here
-}`)
+  const [selectedProblem, setSelectedProblem] = useState<ProblemDefinition>(defaultProblem)
+  const [code, setCode] = useState<string>(() => getTemplateForProblem(defaultProblem, 'javascript'))
   const [coachMessage, setCoachMessage] = useState(
-    "Welcome, hero! Ready to tackle some data structures and algorithms? Let's start with the Two Sum problem!",
+    `Welcome, hero! Ready to tackle ${defaultProblem.title}? Let's swing through it together!`,
   )
   const [isLoading, setIsLoading] = useState(false)
   const [, setIsSpeaking] = useState(false)
@@ -167,7 +167,7 @@ function twoSum(nums, target) {
 
     try {
       const token = await getAccessTokenSilently()
-      const problemId = selectedQuestion?.id || 'two-sum'
+      const problemId = selectedProblem.id
       const codeResult: RunCodeResponse = await runCode(code, selectedLanguage, problemId, token)
 
       let outputText = ''
@@ -203,49 +203,25 @@ function twoSum(nums, target) {
     }
   }
 
-  const handleQuestionSelect = (question: Question) => {
-    setSelectedQuestion(question)
+  const handleQuestionSelect = (problem: ProblemDefinition) => {
+    const definition = getProblemDefinition(problem.id)
+    setSelectedProblem(definition)
     setCurrentView('dashboard')
-    const defaultCode = getDefaultCode(selectedLanguage, question.id)
-    setCode(defaultCode)
+    setCode(getTemplateForProblem(definition, selectedLanguage))
+    setCoachMessage(`New challenge: ${definition.title}! How will you approach it, hero?`)
   }
 
-  const getDefaultCode = (language: string, questionId: string) => {
-    const templates = {
-      javascript: `// ${selectedQuestion?.title || 'Two Sum'}
-function ${questionId.replace('-', '')}(input) {
-    // Your solution here
-}`,
-      python: `# ${selectedQuestion?.title || 'Two Sum'}
-def ${questionId.replace('-', '_')}(input):
-    # Your solution here
-    pass`,
-      java: `// ${selectedQuestion?.title || 'Two Sum'}
-public class Solution {
-    public int[] ${questionId.replace('-', '')}(int[] nums) {
-        // Your solution here
-        return new int[0];
-    }
-}`,
-      cpp: `// ${selectedQuestion?.title || 'Two Sum'}
-class Solution {
-public:
-    vector<int> ${questionId.replace('-', '')}(vector<int>& nums) {
-        // Your solution here
-        return {};
-    }
-};`,
-    }
-
-    return templates[language as keyof typeof templates] || templates.javascript
+  const handleLanguageChange = (language: string) => {
+    setSelectedLanguage(language)
+    setCode(getTemplateForProblem(selectedProblem, language))
   }
 
-  const handleResize = (e: React.MouseEvent) => {
-    const startX = e.clientX
+  const handleResize = (event: React.MouseEvent) => {
+    const startX = event.clientX
     const startWidth = leftPanelWidth
 
-    const handleMouseMove = (event: MouseEvent) => {
-      const newWidth = startWidth + ((event.clientX - startX) / window.innerWidth) * 100
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const newWidth = startWidth + ((moveEvent.clientX - startX) / window.innerWidth) * 100
       setLeftPanelWidth(Math.max(20, Math.min(80, newWidth)))
     }
 
@@ -258,12 +234,12 @@ public:
     document.addEventListener('mouseup', handleMouseUp)
   }
 
-  const handleVerticalResize = (e: React.MouseEvent) => {
-    const startY = e.clientY
+  const handleVerticalResize = (event: React.MouseEvent) => {
+    const startY = event.clientY
     const startHeight = codeEditorHeight
 
-    const handleMouseMove = (event: MouseEvent) => {
-      const newHeight = startHeight + ((event.clientY - startY) / window.innerHeight) * 100
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const newHeight = startHeight + ((moveEvent.clientY - startY) / window.innerHeight) * 100
       setCodeEditorHeight(Math.max(30, Math.min(90, newHeight)))
     }
 
@@ -308,7 +284,7 @@ public:
 
   return (
     <div className="h-screen w-screen flex flex-col hex-grid relative" style={{ height: '100vh', width: '100vw' }}>
-      <div
+      <header
         className="absolute top-0 left-0 right-0 z-30 flex-shrink-0"
         style={{ background: 'rgba(15, 23, 42, 0.95)', height: '64px' }}
       >
@@ -333,7 +309,7 @@ public:
             </button>
           </div>
           <div className="flex items-center gap-4">
-            <LanguageSelector selectedLanguage={selectedLanguage} onLanguageChange={setSelectedLanguage} />
+            <LanguageSelector selectedLanguage={selectedLanguage} onLanguageChange={handleLanguageChange} />
             {user?.name && (
               <span className="text-sm text-white/80 hidden sm:block">Welcome, {user.name.split(' ')[0]}!</span>
             )}
@@ -345,14 +321,14 @@ public:
             </button>
           </div>
         </div>
-      </div>
+      </header>
 
       <div className="flex flex-1 w-full" style={{ marginTop: '64px', height: 'calc(100vh - 64px)' }}>
         <div
           className="relative border-r overflow-hidden h-full"
           style={{ width: `${leftPanelWidth}%`, background: 'var(--spider-dark)', borderColor: 'var(--spider-cyan)' }}
         >
-          <ProblemPanel selectedQuestion={selectedQuestion} />
+          <ProblemPanel selectedQuestion={selectedProblem} />
         </div>
 
         <div

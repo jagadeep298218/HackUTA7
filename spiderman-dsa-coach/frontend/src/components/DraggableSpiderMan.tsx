@@ -123,29 +123,26 @@ const DraggableSpiderMan: React.FC<DraggableSpiderManProps> = ({
         <div className="relative">
           {/* Spider-Man Avatar */}
           <div className="w-32 h-32 flex items-center justify-center shadow-2xl transition-all duration-300">
-            {isLoading ? (
-              <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            <img
+              src={showBubble ? "/speaking_pose.png" : "/standard_pose.png"}
+              alt="Spider-Man Mascot"
+              className={`w-full h-full object-contain transition-all duration-300 hover:scale-105 ${
+                showBubble ? 'animate-pulse' : ''
+              }`}
+              style={{ 
+                filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))',
+                imageRendering: 'crisp-edges'
+              }}
+              onError={(e) => {
+                // Fallback if images don't exist
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full bg-red-500 rounded-full flex items-center justify-center text-white text-xl font-bold">SM</div>';
+              }}
+            />
+            {isLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                <div className="w-6 h-6 border-4 border-white/70 border-t-transparent rounded-full animate-spin"></div>
               </div>
-            ) : (
-              <img
-                src={showBubble ? "/speaking_pose.png" : "/standard_pose.png"}
-                alt="Spider-Man Mascot"
-                className={`w-full h-full object-contain transition-all duration-300 hover:scale-105 ${
-                  showBubble ? 'animate-pulse' : ''
-                }`}
-                style={{ 
-                  filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))',
-                  imageRendering: 'crisp-edges'
-                }}
-                onError={(e) => {
-                  // Fallback if images don't exist
-                  e.currentTarget.style.display = 'none';
-                  e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full bg-red-500 rounded-full flex items-center justify-center text-white text-xl font-bold">SM</div>';
-                }}
-              />
             )}
           </div>
           

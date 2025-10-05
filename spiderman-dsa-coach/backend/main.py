@@ -152,7 +152,35 @@ def get_test_cases_for_problem(problem_id: str) -> List[TestCase]:
             TestCase(input='"()"', expected="true", description="Simple parentheses"),
             TestCase(input='"(())"', expected="true", description="Nested parentheses"),
             TestCase(input='"([)]"', expected="false", description="Invalid nesting"),
-        ]
+        ],
+        "merge-sorted-arrays": [
+            TestCase(input='[1, 2, 3], [2, 5, 6]', expected='[1,2,2,3,5,6]', description="Merge basic arrays"),
+            TestCase(input='[], [1]', expected='[1]', description="One array empty"),
+        ],
+        "max-subarray": [
+            TestCase(input='[-2, 1, -3, 4, -1, 2, 1, -5, 4]', expected='6', description="Classic example"),
+            TestCase(input='[1]', expected='1', description="Single element"),
+        ],
+        "climbing-stairs": [
+            TestCase(input='3', expected='3', description="Three steps"),
+            TestCase(input='5', expected='8', description="Five steps"),
+        ],
+        "best-time-stock": [
+            TestCase(input='[7, 1, 5, 3, 6, 4]', expected='5', description="Profit available"),
+            TestCase(input='[7, 6, 4, 3, 1]', expected='0', description="No profit"),
+        ],
+        "single-number": [
+            TestCase(input='[4, 1, 2, 1, 2]', expected='4', description="Lonely number"),
+            TestCase(input='[2, 2, 1]', expected='1', description="Single at end"),
+        ],
+        "majority-element": [
+            TestCase(input='[3, 2, 3]', expected='3', description="Simple majority"),
+            TestCase(input='[2, 2, 1, 1, 1, 2, 2]', expected='2', description="Mixed values"),
+        ],
+        "happy-number": [
+            TestCase(input='19', expected='true', description="Happy number"),
+            TestCase(input='2', expected='false', description="Not a happy number"),
+        ],
     }
     return test_cases_map.get(problem_id, [
         TestCase(input="[1, 2, 3]", expected="[0, 1]", description="Sample test case")
