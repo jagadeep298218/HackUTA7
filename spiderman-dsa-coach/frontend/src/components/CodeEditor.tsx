@@ -72,8 +72,8 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, onRun, isLoadin
         <div className="p-3 flex items-center justify-between text-sm" style={{ color: 'var(--spider-cyan)' }}>
           <div className="flex items-center space-x-4">
             <span className="capitalize font-medium">{language}</span>
-            <span>•</span>
-            <span>Monaco Editor</span>
+            <span></span>
+            <span></span>
           </div>
           <div className="flex items-center space-x-2">
             <div className="w-2 h-2 rounded-full electric-glow"></div>
